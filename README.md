@@ -31,6 +31,11 @@ You can access the Raspberry Pi using SSH (Secure Shell) from your PC. Follow th
 
    The Pi can also be accesed using Pi Connect: visit [Pi Connect Devices](https://connect.raspberrypi.com/devices) to find the Pi and connect to it via SSH. The credetianls for an account that is allready connected can be also requested :P
 
+## Samba virtuall Drive
+
+Samba Drive is located in pxd/shared
+user: pxd
+Passwort: tonsor25
 
 ---
 
