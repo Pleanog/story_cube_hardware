@@ -1,0 +1,3 @@
+um den code laufen zu lassen muss man die datei in der env ausführen:
+(und evtl. davor auch die env aktivieren)
+sudo /home/pxd/pxdenv/bin/python3 led_control.py
