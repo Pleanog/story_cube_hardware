@@ -9,6 +9,9 @@ import wave
 import os
 from datetime import datetime
 from led_control import set_led_color
+from audio_post_processor import process_audio
+from audio_uploader import upload_audio
+from data_cleaner import delete_old_uploaded_files, get_unuploaded_files
 
 # Konfiguriere Aufnahmeparameter
 FORMAT = pyaudio.paInt16
@@ -43,11 +46,18 @@ def start_recording():
     process.terminate()
 
     print(f"Datei gespeichert: {filename}")
+    manage_audio_lifecycle(filename)
 
 # Funktion zum Stoppen der Audioaufnahme
 def stop_recording():
     global recording
     recording = False
+
+def manage_audio_lifecycle(original_file):
+    print(f"Verarbeite Audio-Datei: {original_file}")
+    louderaudioasmp3 = process_audio(original_file)
+    upload_audio(louderaudioasmp3)
+    print("Audio-Verarbeitung abgeschlossen.")
 
 # Start the button handler as a separate process
 button_handler_process = subprocess.Popen(["python3", "button_handler.py"])
@@ -124,16 +134,27 @@ def listen_for_gyro_data():
                     message = data.decode()
                     print(f"Received Gyro Data: {message}")
                     if message == "shake:1":
-                        print("Shake detected!")
+                        print("\033[1;33mShake detected!\033[0m")
                         set_led_color("red")
                     elif message.startswith("face:"):
-                        print(f"Dice Face Up: {message[5:]}")  # e.g. "Dice Face Up: 3"
+                        print(f"Dice Face Up: \033[1;31m{message[5:]}\033[0m")
                         set_led_color("blue")
     except OSError as e:
         print(f"Socket bind failed: {e}")
 
+
+def manage_old_audiofiles():
+    delete_old_uploaded_files()
+    unuploaded_files = get_unuploaded_files()
+    for file in unuploaded_files:
+        upload_audio(file)
+        time.sleep(2)
+
 # Main function
 def main():
+    manage_old_audiofiles_thread = threading.Thread(target=manage_old_audiofiles)
+    manage_old_audiofiles_thread.start()
+    
     # Set up signal handler for cleanup on Ctrl+C
     signal.signal(signal.SIGINT, cleanup_and_exit)
 
@@ -147,6 +168,7 @@ def main():
     button_thread.start()
     gyro_thread.start()
 
+    
     # Main program logic (do other tasks while listening for button press and gyro events)
     while True:
         print('Doing something else...')  # Main program continues with other tasks
