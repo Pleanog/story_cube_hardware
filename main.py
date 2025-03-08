@@ -21,53 +21,26 @@ os.makedirs(audio_dir, exist_ok=True)
 # Globale Variable für die Aufnahme
 recording = False
 
-# Funktion zum Starten der Audioaufnahme
 def start_recording():
     global recording
     print("Aufnahme gestartet...")
 
     filename = os.path.join(audio_dir, f"recording_{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav")
 
-    # PyAudio-Instanz erstellen
-    p = pyaudio.PyAudio()
+    # Starte die Aufnahme mit arecord
+    process = subprocess.Popen(["arecord", "-D", "plughw:1,0", "-f", "S16_LE", "-r", "16000", "-c", "1", filename])
 
-    # Passendes Mikrofon-Device suchen (optional)
-    device_index = None
-    for i in range(p.get_device_count()):
-        info = p.get_device_info_by_index(i)
-        if "USB" in info["name"]:  # Beispiel für USB-Mikrofon
-            device_index = i
-            break
+    start_time = time.time()
 
-    # Aufnahme starten
-    stream = p.open(format=FORMAT,
-                    channels=CHANNELS,
-                    rate=RATE,
-                    input=True,
-                    input_device_index=device_index,
-                    frames_per_buffer=CHUNK)
-    print("Aufnahme läuft...")
-    frames = []
-    try:
-        while recording:
-            data = stream.read(CHUNK, exception_on_overflow=False)  # Verhindert Overflow-Fehler
-            frames.append(data)
-    except Exception as e:
-        print(f"Fehler während der Aufnahme: {e}")
+    while recording:
+        elapsed_time = int(time.time() - start_time)
+        sys.stdout.write(f"\rRecording since {elapsed_time} sec...")  # Overwrite the same line
+        sys.stdout.flush()  # Make sure it updates immediately
+        time.sleep(1)
 
-    print("Aufnahme beendet.")
-
-    # Stream und PyAudio schließen
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
-
-    # Datei speichern
-    with wave.open(filename, 'wb') as wf:
-        wf.setnchannels(CHANNELS)
-        wf.setsampwidth(p.get_sample_size(FORMAT))
-        wf.setframerate(RATE)
-        wf.writeframes(b''.join(frames))
+    # Beende die Aufnahme
+    print("\nAufnahme beendet.")  # Move to the next line
+    process.terminate()
 
     print(f"Datei gespeichert: {filename}")
 
