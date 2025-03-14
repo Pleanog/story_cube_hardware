@@ -94,6 +94,7 @@ def gyro_handler():
         if shaking:
             print("Shake detected! Preventing face change.")
             sock.sendall("shake:1".encode())  # Send shake signal to main.py
+            time.sleep(2)
 
         time.sleep(0.5)  # Reduce update rate to avoid unnecessary checks
 

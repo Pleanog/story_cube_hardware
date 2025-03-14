@@ -21,18 +21,20 @@ RATE = 44100  # 44.1 kHz ist Standard für Audio
 CHUNK = 1024
 audio_dir = "audio"
 os.makedirs(audio_dir, exist_ok=True)
+dice_face_up = "unknown"
+current_recording_file = None
 
 # Globale Variable für die Aufnahme
 recording = False
 
 def start_recording():
-    global recording
+    global recording, dice_face_up, current_recording_file
     print("Aufnahme gestartet...")
 
-    filename = os.path.join(audio_dir, f"recording_{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav")
+    current_recording_file = os.path.join(audio_dir, f"recording_{dice_face_up}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav")
 
     # Starte die Aufnahme mit arecord
-    process = subprocess.Popen(["arecord", "-D", "plughw:1,0", "-f", "S16_LE", "-r", "16000", "-c", "1", filename])
+    process = subprocess.Popen(["arecord", "-D", "plughw:1,0", "-f", "S16_LE", "-r", "16000", "-c", "1", current_recording_file])
 
     start_time = time.time()
 
@@ -46,8 +48,25 @@ def start_recording():
     print("\nAufnahme beendet.")  # Move to the next line
     process.terminate()
 
-    print(f"Datei gespeichert: {filename}")
-    manage_audio_lifecycle(filename)
+    if current_recording_file and os.path.exists(current_recording_file):
+        print(f"Datei gespeichert: {current_recording_file}")
+        manage_audio_lifecycle(current_recording_file)
+
+def abort_recording():
+    global recording, current_recording_file
+    if recording:
+        print("\n❌ Aufnahme abgebrochen!")
+        recording = False
+        set_led_color("yellow", mode="pulse",repeat=10)
+
+        if current_recording_file and os.path.exists(current_recording_file):
+            os.remove(current_recording_file)
+            print(f"⚠️ Datei gelöscht: {current_recording_file}")
+        
+        current_recording_file = None
+        time.sleep(1)
+        set_led_color("white", mode="static")
+
 
 # Funktion zum Stoppen der Audioaufnahme
 def stop_recording():
@@ -60,25 +79,11 @@ def manage_audio_lifecycle(original_file):
     succes = upload_audio(louderaudioasmp3)
     if not succes:
         set_led_color("red", mode="blink", repeat=5, blink_interval=0.1)
-        # set_led_color("red")
-        # time.sleep(0.1)
-        # set_led_color("white")
-        # time.sleep(0.1)
-        # set_led_color("red")
-        # time.sleep(0.1)
-        # set_led_color("white")
-        # time.sleep(0.1)
-        # set_led_color("red")
-        # time.sleep(0.1)
-        # set_led_color("white")
-        # time.sleep(0.1)
-        # set_led_color("red")
     else: 
         print("Audio-Verarbeitung abgeschlossen.")
         set_led_color("green", mode="static")
         time.sleep(1)
         set_led_color("white", mode="static")
-        # set_led_color("white")
 
 # Start the button handler as a separate process
 button_handler_process = subprocess.Popen(["python3", "button_handler.py"])
@@ -87,20 +92,15 @@ gyro_handler_process = subprocess.Popen(["python3", "gyro_handler.py"])
 SOCKET_ADDRESS_BUTTON = ('localhost', 65432)  # Socket for button press events
 SOCKET_ADDRESS_GYRO = ('localhost', 65433)  # Socket for gyro events
 
-
-# Knopf gedrückt -> Aufnahme starten
 def on_button_pressed():
     global recording
     if not recording:
         recording = True
-        # Startet die Audioaufnahme in einem neuen Thread
-        recording_thread = threading.Thread(target=start_recording)
-        recording_thread.start()
-
-# Knopf losgelassen -> Aufnahme stoppen
-def on_button_released():
-    if recording:
+        threading.Thread(target=start_recording).start()
+        set_led_color("green", mode="static")
+    else:
         stop_recording()
+        set_led_color("green", mode="pulse", repeat=10)
 
 def listen_for_button_data():
     try:
@@ -123,13 +123,12 @@ def listen_for_button_data():
                         on_button_pressed()  # Start recording
                         set_led_color("green", mode="static")
                     elif message == 'button_released':
-                        on_button_released()  # Stop the recording and save
                         print("Button released in main program!")
-                        set_led_color("green", mode="pulse", repeat=10)
     except OSError as e:
         print(f"Socket bind failed: {e}")
 
 def listen_for_gyro_data():
+    global dice_face_up
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(SOCKET_ADDRESS_GYRO)  # Bind the socket to the gyro address
@@ -147,12 +146,12 @@ def listen_for_gyro_data():
                     print(f"Received Gyro Data: {message}")
                     if message == "shake:1":
                         print("\033[1;33mShake detected!\033[0m")
-                        set_led_color("yellow", mode="fade",repeat=10)
-                        time.sleep(3)
-                        set_led_color("white", mode="static")
+                        abort_recording()
                     elif message.startswith("face:"):
-                        print(f"Dice Face Up: \033[1;31m{message[5:]}\033[0m")
-                        set_led_color("blue", mode="blink", repeat=2, blink_interval=0.1)
+                        if not recording:
+                            dice_face_up = message[5:]
+                            print(f"Dice Face Up: \033[1;31m{message[5:]}\033[0m")
+                            set_led_color("blue", mode="blink", repeat=2, blink_interval=0.1)
 
     except OSError as e:
         print(f"Socket bind failed: {e}")
@@ -189,7 +188,7 @@ def cleanup_and_exit(signum, frame):
 #             print("No internet connection. Retrying in {} seconds...".format(check_interval))
 #             set_led_color("orange-red", mode="static")
 #             # set_led_color("orange-red")  # Set LEDs to white when connected
-#             time.sleep(check_interval)  # Wait for a while before retrying
+#             time.sleep(check_interval)  # Wait for a while before retrying 
 
 # Main function
 def main():
