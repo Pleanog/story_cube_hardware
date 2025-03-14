@@ -21,8 +21,8 @@ def process_audio(original_file):
     # WAV-Datei laden
     audio = AudioSegment.from_wav(backup_file)
 
-    # Lautstärke um 40 dB erhöhen
-    louder_audio = audio + 40
+    # Lautstärke um 25 dB erhöhen
+    louder_audio = audio + 25
 
     # Als MP3 speichern
     louder_audio.export(output_mp3, format="mp3")

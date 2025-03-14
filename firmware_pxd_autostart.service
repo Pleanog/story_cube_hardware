@@ -1,0 +1,15 @@
+[Unit]
+Description=Firmware for the Raspberry Pi Story Cube, that records audio and sends it to the cloud.
+After=network.target  # Warten auf Netzwerkverbindung
+
+[Service]
+Type=simple
+User=pxd  # Benutzer, der das Skript ausführt
+ExecStart=/bin/bash -c 'source /home/pxd/pxdenv/bin/activate && /home/pxd/pxdenv/bin/python3 /home/pxd/shared/main.py'
+WorkingDirectory=/home/pxd/shared
+Restart=always  # Skript neu starten, falls es abstürzt
+Environment="PATH=/home/pxd/pxdenv/bin:$PATH"
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target

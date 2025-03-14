@@ -18,7 +18,6 @@ bus.write_byte_data(MPU_ADDR, PWR_MGMT_1, 0)  # Wake up sensor
 SHAKE_THRESHOLD = 1.5  # Threshold for shake magnitude (adjust as needed)
 SHAKE_TIME_THRESHOLD = 0.5  # Minimum time between shakes (in seconds)
 
-
 # Variables for shake detection
 last_shake_time = time.time()
 last_tap_time = time.time()
@@ -86,15 +85,15 @@ def gyro_handler():
         current_face = determine_dice_face(ax, ay, az)
         shaking = detect_shake(ax, ay, az)
         
-        if current_face != last_face and current_face != 0:
+        # Only send face updates if no shaking is detected
+        if current_face != last_face and current_face != 0 and not shaking:
             print(f"Dice Face Up: {current_face}")
             last_face = current_face
             sock.sendall(f"face:{current_face}".encode())  # Send dice face to main.py
 
         if shaking:
-            print("Shake detected!")
+            print("Shake detected! Preventing face change.")
             sock.sendall("shake:1".encode())  # Send shake signal to main.py
-
 
         time.sleep(0.5)  # Reduce update rate to avoid unnecessary checks
 

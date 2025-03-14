@@ -2,6 +2,11 @@
 
 This guide explains how to access the Raspberry Pi Zero W v1.1 via SSH, set up and use a Python virtual environment, run a Python script, and manage Wi-Fi configurations.
 
+## 0. Starting the firmaware
+     ```bash
+     cd shared/ && source ~/pxdenv/bin/activate && sudo ~/pxdenv/bin/python3 main.py
+     ```
+
 ## 1. **Accessing the Raspberry Pi via SSH**
 
 ### Prerequisites:
@@ -76,7 +81,7 @@ Running Your Script:
 Once dependencies are installed, you can run your Python script:
 
 ```bash
-python your_script.py
+ sudo /home/pxd/pxdenv/bin/python3 main.py
 ```
 Deactivate the Virtual Environment:
 When done, you can deactivate the virtual environment:
@@ -124,6 +129,16 @@ network={
 ```
 This way, the Pi will automatically connect to any available network listed in the configuration.
 
+## Connect to Eduroam
+
+i configured the pi allready here:
+`nano eduroam.profile`
+i need to connect to eduroam manually when i am near it next time with: 
+```
+sudo wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/eduroam.profile
+```
+
+
 ## 5. Other Information
 IP Address:
 The Raspberry Pi will likely have a dynamic IP address, meaning it may change if the Pi reboots or reconnects to the network. To keep track of the IP:
@@ -131,8 +146,39 @@ The Raspberry Pi will likely have a dynamic IP address, meaning it may change if
 Use a network scanning tool to find the Pi’s IP on your network.
 You can assign a static IP using your router’s DHCP settings, or configure the Pi’s network settings directly via /etc/dhcpcd.conf.
 
+## Autostart
+Die Firmware wird nun automatisch beim Systemstart ausgeführt, sobald eine Internetverbindung gefunden wurde.
+Es wird im pxdenv-Environment ausgeführt, und zwar mit sudo-Rechten, um sicherzustellen, dass alle erforderlichen Berechtigungen vorhanden sind.
+
+Autostart der firmware läuft automatisch und kann hier gefunden / bearbeitet werden:
+```
+sudo nano /etc/systemd/system/firmware_pxd_autostart.service 
+```
+So wurde die firmware aktiviert und kann auch deaktiviert werden (stichwort enable/disable):
+```
+sudo systemctl enable firmware_pxd_autostart.service 
+```
+logs ansehen:
+```
+sudo journalctl -u firmware_pxd_autostart.service -f
+```
+service manuell stoppen:
+```
+sudo systemctl stop firmware_pxd_autostart.service
+```
+und dann nach dem stoppen schauen, ob er auch wirklich beendet ist:
+```
+sudo systemctl status myscript.service
+```
+
+### clean up audio files
+
+sudo rm -rf audio
+
+
 ## 6. Pi Connect (Optional)
 You can use Pi Connect to access and manage your Pi remotely.
 
 Visit Pi Connect Devices to link your Pi.
 Use Pi Connect to access the Pi via an easy-to-use web interface.
+

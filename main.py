@@ -7,8 +7,9 @@ import sys
 import pyaudio
 import wave
 import os
+import requests
 from datetime import datetime
-from led_control import set_led_color
+from led_control import set_led_color, led_shutdown
 from audio_post_processor import process_audio
 from audio_uploader import upload_audio
 from data_cleaner import delete_old_uploaded_files, get_unuploaded_files
@@ -56,8 +57,28 @@ def stop_recording():
 def manage_audio_lifecycle(original_file):
     print(f"Verarbeite Audio-Datei: {original_file}")
     louderaudioasmp3 = process_audio(original_file)
-    upload_audio(louderaudioasmp3)
-    print("Audio-Verarbeitung abgeschlossen.")
+    succes = upload_audio(louderaudioasmp3)
+    if not succes:
+        set_led_color("red", mode="blink", repeat=5, blink_interval=0.1)
+        # set_led_color("red")
+        # time.sleep(0.1)
+        # set_led_color("white")
+        # time.sleep(0.1)
+        # set_led_color("red")
+        # time.sleep(0.1)
+        # set_led_color("white")
+        # time.sleep(0.1)
+        # set_led_color("red")
+        # time.sleep(0.1)
+        # set_led_color("white")
+        # time.sleep(0.1)
+        # set_led_color("red")
+    else: 
+        print("Audio-Verarbeitung abgeschlossen.")
+        set_led_color("green", mode="static")
+        time.sleep(1)
+        set_led_color("white", mode="static")
+        # set_led_color("white")
 
 # Start the button handler as a separate process
 button_handler_process = subprocess.Popen(["python3", "button_handler.py"])
@@ -81,15 +102,6 @@ def on_button_released():
     if recording:
         stop_recording()
 
-# Function to handle cleanup when the program is interrupted
-def cleanup_and_exit(signum, frame):
-    print("Program interrupted. Cleaning up...")
-    set_led_color("off")  # Turn off the LEDs when exiting
-    # Clean up subprocesses
-    button_handler_process.terminate()
-    gyro_handler_process.terminate()
-    sys.exit(0)
-
 def listen_for_button_data():
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -109,11 +121,11 @@ def listen_for_button_data():
                     if message == 'button_pressed':
                         print("Button pressed in main program!")
                         on_button_pressed()  # Start recording
-                        set_led_color("red")
+                        set_led_color("green", mode="static")
                     elif message == 'button_released':
                         on_button_released()  # Stop the recording and save
-                        set_led_color("green")
                         print("Button released in main program!")
+                        set_led_color("green", mode="pulse", repeat=10)
     except OSError as e:
         print(f"Socket bind failed: {e}")
 
@@ -135,26 +147,56 @@ def listen_for_gyro_data():
                     print(f"Received Gyro Data: {message}")
                     if message == "shake:1":
                         print("\033[1;33mShake detected!\033[0m")
-                        set_led_color("red")
+                        set_led_color("yellow", mode="fade",repeat=10)
+                        time.sleep(3)
+                        set_led_color("white", mode="static")
                     elif message.startswith("face:"):
                         print(f"Dice Face Up: \033[1;31m{message[5:]}\033[0m")
-                        set_led_color("blue")
+                        set_led_color("blue", mode="blink", repeat=2, blink_interval=0.1)
+
     except OSError as e:
         print(f"Socket bind failed: {e}")
-
 
 def manage_old_audiofiles():
     delete_old_uploaded_files()
     unuploaded_files = get_unuploaded_files()
     for file in unuploaded_files:
         upload_audio(file)
-        time.sleep(2)
+        time.sleep(1)
+
+# Function to handle cleanup when the program is interrupted
+def cleanup_and_exit(signum, frame):
+    print("Firmware interrupted. Cleaning up...")
+    button_handler_process.terminate()
+    gyro_handler_process.terminate()
+    led_shutdown()
+    sys.exit(0)
+
+# def wait_for_internet():
+#     # Define a timeout and check interval for better responsiveness
+#     timeout = 5  # Retry interval in seconds
+#     check_interval = 1  # How often to check for the connection (in seconds)
+
+#     while True:
+#         try:
+#             # Try to connect to a reliable server (e.g., Google's DNS server)
+#             socket.create_connection(("8.8.8.8", 53), timeout=timeout)  # Google's DNS server (port 53)
+#             print("Internet connection detected.")
+#             set_led_color("white", mode="static")
+#             # set_led_color("white")
+#             break  # Break out of the loop once connected
+#         except (socket.timeout, socket.gaierror, ConnectionRefusedError):
+#             print("No internet connection. Retrying in {} seconds...".format(check_interval))
+#             set_led_color("orange-red", mode="static")
+#             # set_led_color("orange-red")  # Set LEDs to white when connected
+#             time.sleep(check_interval)  # Wait for a while before retrying
 
 # Main function
 def main():
+    # wait_for_internet()
+
     manage_old_audiofiles_thread = threading.Thread(target=manage_old_audiofiles)
     manage_old_audiofiles_thread.start()
-    
     # Set up signal handler for cleanup on Ctrl+C
     signal.signal(signal.SIGINT, cleanup_and_exit)
 
@@ -167,12 +209,11 @@ def main():
 
     button_thread.start()
     gyro_thread.start()
-
     
-    # Main program logic (do other tasks while listening for button press and gyro events)
+    # Main program ca continue with other tasks
     while True:
-        print('Doing something else...')  # Main program continues with other tasks
-        time.sleep(1)  # Simulate doing other tasks (adjust timing as needed)
+        print('Firmware wating for inputs ...')  
+        time.sleep(2)
 
 if __name__ == "__main__":
     main()

@@ -4,7 +4,7 @@ import shutil
 import time
 
 # Firebase Cloud Function URL (Replace with your actual URL)
-CLOUD_FUNCTION_URL = "YOUR_CLOUD_FUNCTION_URL"
+CLOUD_FUNCTION_URL = "https://pxd-backend-225234343013.europe-west1.run.app/upload"
 
 def upload_audio(file_path, max_retries=3, retry_delay=5):
     """
