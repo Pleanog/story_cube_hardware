@@ -2,16 +2,18 @@
 
 This guide explains how to access the Raspberry Pi Zero W v1.1 via SSH, set up and use a Python virtual environment, run a Python script, and manage Wi-Fi configurations.
 
-## 0. Starting the firmaware
-     ```bash
-     cd shared/ && source ~/pxdenv/bin/activate && sudo ~/pxdenv/bin/python3 main.py
-     ```
+## 0. Quickstart
+Explanation see below Point 2. Starting the Firmware
+
+```bash
+cd shared/ && source ~/pxdenv/bin/activate && sudo /home/pxd/pxdenv/bin/python3 main.py
+```
 
 ## 1. **Accessing the Raspberry Pi via SSH**
 
 ### Prerequisites:
-- Raspberry Pi Zero W running Raspberry Pi OS (Lite or Full).
 - The Pi is connected to the same local network as your PC.
+- If the Pi is connected to a different network or can't be directly accesed, but has an internet you can use PiConnect (see further down)
 
 ### SSH Access:
 
@@ -30,12 +32,13 @@ You can access the Raspberry Pi using SSH (Secure Shell) from your PC. Follow th
      ssh pxd@192.168.x.x
      ```
 
-     pxd is the username
-     the password needs to be requested :P
+     Username on the Pi: **pxd**
+     Password: needs to be requested :P
 
 
    The Pi can also be accesed using Pi Connect: visit [Pi Connect Devices](https://connect.raspberrypi.com/devices) to find the Pi and connect to it via SSH. The credetianls for an account that is allready connected can be also requested :P
-
+   As soon as the Pi haa internet connection it tries to connect with Pi-Connect. This takes between 3-5min and then you will see a "Connect" Button that opens anew window with a direct ssh tunel to the pi.
+   
 ## Samba virtuall Drive
 
 Samba Drive is located in pxd/shared
@@ -44,7 +47,31 @@ Passwort: tonsor25
 
 ---
 
-## 2. **Setting Up a Python Virtual Environment**
+## 2. Starting the Firmware
+Die Firmware wird leider nicht automatisch beim Systemstart ausgeführt.
+
+cd shared/ && source ~/pxdenv/bin/activate && sudo /home/pxd/pxdenv/bin/python3 main.py 
+
+The following command is used to navigate to the correct directory, activate the Python virtual environment, and run the main Python script with elevated privileges:
+
+```bash
+cd shared/ && source ~/pxdenv/bin/activate && sudo /home/pxd/pxdenv/bin/python3 main.py
+```
+`cd shared/` - Changes the current working directory to shared/, where necessary files might be stored.
+`source ~/pxdenv/bin/activate` - Activates the virtual environment located in ~/pxdenv/, ensuring that the correct Python dependencies are used.
+`sudo /home/pxd/pxdenv/bin/python3 main.py` - Runs main.py using the Python interpreter inside the virtual environment.
+
+`sudo` is used to grant the script elevated privileges, which is required for accessing the hardware.
+
+#### Stopping the Program
+To stop the program, press `Ctrl + C` in the terminal.
+
+
+
+---
+
+
+## 3. **Setting Up a Python Virtual Environment**
 
 ### Create and Activate the Virtual Environment:
 
@@ -89,8 +116,15 @@ When done, you can deactivate the virtual environment:
 ```bash
 deactivate
 ```
-## 4. Wi-Fi Configuration
-To configure Wi-Fi on your Raspberry Pi:
+## 5. Wi-Fi Configuration
+To configure Wi-Fi on Raspberry Pi:
+
+Using `nmcli` (Recommended)
+To connect to a Wi-Fi network:
+
+```bash
+nmcli dev wifi connect "SSID_NAME" password "WIFI_PASSWORD"
+```
 
 Change Wi-Fi Configuration:
 Open the Wi-Fi configuration file:
@@ -129,28 +163,19 @@ network={
 ```
 This way, the Pi will automatically connect to any available network listed in the configuration.
 
-## Connect to Eduroam
-
-i configured the pi allready here:
-`nano eduroam.profile`
-i need to connect to eduroam manually when i am near it next time with: 
-```
-sudo wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/eduroam.profile
-```
-
-
-## 5. Other Information
+## 6. Other Information
 IP Address:
 The Raspberry Pi will likely have a dynamic IP address, meaning it may change if the Pi reboots or reconnects to the network. To keep track of the IP:
 
 Use a network scanning tool to find the Pi’s IP on your network.
 You can assign a static IP using your router’s DHCP settings, or configure the Pi’s network settings directly via /etc/dhcpcd.conf.
 
-## Autostart
-Die Firmware wird nun automatisch beim Systemstart ausgeführt, sobald eine Internetverbindung gefunden wurde.
-Es wird im pxdenv-Environment ausgeführt, und zwar mit sudo-Rechten, um sicherzustellen, dass alle erforderlichen Berechtigungen vorhanden sind.
+---
 
-Autostart der firmware läuft automatisch und kann hier gefunden / bearbeitet werden:
+## 7. AutoStart
+Die Firmware wird leider nicht automatisch beim Systemstart ausgeführt.
+Autostart der firmware kann hier motifiziert werden, läuft aktuell aber leider nicht
+
 ```
 sudo nano /etc/systemd/system/firmware_pxd_autostart.service 
 ```
@@ -175,10 +200,6 @@ sudo systemctl status myscript.service
 
 sudo rm -rf audio
 
-
 ## 6. Pi Connect (Optional)
 You can use Pi Connect to access and manage your Pi remotely.
-
-Visit Pi Connect Devices to link your Pi.
-Use Pi Connect to access the Pi via an easy-to-use web interface.
 
